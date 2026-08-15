@@ -18,7 +18,7 @@ import {
   Fuel,
   BarChart3,
 } from 'lucide-react';
-
+import { supabase } from './supabaseClient';
 // ─────────────────────────────────────────────────────────
 // BASE DE DATOS
 // ─────────────────────────────────────────────────────────
@@ -1268,7 +1268,36 @@ export default function App() {
   const intervalRef = useRef(null);
   const advanceRef = useRef(null);
   const inputRef = useRef(null);
+  const [nick, setNick] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
 
+  const fetchLeaderboard = async () => {
+    const { data } = await supabase
+      .from('ranking_valorenfuga')
+      .select('nick,score')
+      .order('score', { ascending: false })
+      .limit(10);
+    if (data) setLeaderboard(data);
+  };
+
+  const saveScore = async () => {
+    if (!nick.trim() || saving || saved) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('ranking_valorenfuga')
+      .insert({ nick: nick.trim().slice(0, 20), score: totalScore });
+    setSaving(false);
+    if (!error) {
+      setSaved(true);
+      fetchLeaderboard();
+    }
+  };
+
+  useEffect(() => {
+    if (screen === 'end') fetchLeaderboard();
+  }, [screen]);
   const buildRounds = () =>
     shuffle([
       ...shuffle(FIAT_BILLS)
@@ -1280,12 +1309,17 @@ export default function App() {
     ]);
 
   const startGame = () => {
-    setRounds(buildRounds());
-    setRoundIdx(0);
-    setHistory([]);
-    setInput('');
-    setTimeLeft(ROUND_SECONDS);
-    setScreen('play');
+    const startGame = () => {
+      setRounds(buildRounds());
+      setRoundIdx(0);
+      setHistory([]);
+      setInput('');
+      setTimeLeft(ROUND_SECONDS);
+      setNick('');
+      setSaved(false);
+      setLeaderboard([]);
+      setScreen('play');
+    };
   };
 
   const submitAnswer = useCallback(
@@ -1496,7 +1530,45 @@ export default function App() {
               con fines educativos.
             </p>
           </div>
-
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 mb-4">
+            <div className="flex items-center gap-2 text-slate-300 font-bold mb-3 text-sm uppercase tracking-wide">
+              <Trophy className="w-4 h-4 text-amber-400" /> Ranking global
+            </div>
+            {!saved ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={nick}
+                  onChange={(e) => setNick(e.target.value)}
+                  placeholder="Tu nick"
+                  className="flex-1 bg-slate-800 border-2 border-slate-700 focus:border-white outline-none rounded-xl px-4 py-2 text-sm font-mono text-center placeholder:text-slate-600"
+                />
+                <button
+                  onClick={saveScore}
+                  disabled={!nick.trim() || saving}
+                  className="bg-white text-slate-950 font-bold px-4 rounded-xl hover:bg-slate-200 active:scale-95 transition disabled:opacity-40"
+                >
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            ) : (
+              <p className="text-emerald-400 text-sm text-center font-bold">¡Puntaje guardado, {nick}!</p>
+            )}
+            {leaderboard.length > 0 && (
+              <div className="mt-4 space-y-1">
+                {leaderboard.map((row, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm py-1 border-b border-slate-800 last:border-0">
+                    <span className="text-slate-400">
+                      <span className="text-slate-600 font-mono mr-2">#{i + 1}</span>
+                      {row.nick}
+                    </span>
+                    <span className="font-mono font-bold text-amber-300">{row.score} pts</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 mb-6 max-h-48 overflow-y-auto">
             {history.map((h, i) => (
               <div
