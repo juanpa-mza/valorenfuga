@@ -1308,7 +1308,6 @@ export default function App() {
         .map((a) => ({ ...a, type: 'asset' })),
     ]);
 
-  const startGame = () => {
     const startGame = () => {
       setRounds(buildRounds());
       setRoundIdx(0);
@@ -1320,7 +1319,7 @@ export default function App() {
       setLeaderboard([]);
       setScreen('play');
     };
-  };
+
 
   const submitAnswer = useCallback(
     (timedOut) => {
