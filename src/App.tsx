@@ -1281,13 +1281,17 @@ export default function App() {
       .limit(10);
     if (data) setLeaderboard(data);
   };
-
+  const viewRanking = () => {
+    fetchLeaderboard();
+    setScreen('ranking');
+  };
   const saveScore = async () => {
     if (!nick.trim() || saving || saved) return;
     setSaving(true);
+    const trimmedNick = nick.trim().slice(0, 20);
     const { error } = await supabase
       .from('ranking_valorenfuga')
-      .insert({ nick: nick.trim().slice(0, 20), score: totalScore });
+      .upsert({ nick: trimmedNick, score: totalScore }, { onConflict: 'nick' });
     setSaving(false);
     if (!error) {
       setSaved(true);
@@ -1466,12 +1470,52 @@ export default function App() {
           >
             <Play className="w-5 h-5" fill="currentColor" /> Empezar partida
           </button>
+          <button
+            onClick={viewRanking}
+            className="w-full mt-3 flex items-center justify-center gap-2 text-slate-400 hover:text-white font-medium text-sm py-2 transition"
+          >
+            <Trophy className="w-4 h-4" /> Ver ranking global
+          </button>
         </div>
       </div>
     );
   }
 
   // ── PANTALLA: FINAL ──────────────────────────────────
+  if (screen === 'ranking') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="flex items-center gap-2 text-slate-100 font-bold mb-5 text-xl justify-center">
+            <Trophy className="w-6 h-6 text-amber-400" /> Ranking global
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 mb-6">
+            {leaderboard.length > 0 ? (
+              <div className="space-y-1">
+                {leaderboard.map((row, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-slate-800 last:border-0">
+                    <span className="text-slate-300">
+                      <span className="text-slate-600 font-mono mr-2">#{i + 1}</span>
+                      {row.nick}
+                    </span>
+                    <span className="font-mono font-bold text-amber-300">{row.score} pts</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm text-center">Todavía no hay puntajes cargados.</p>
+            )}
+          </div>
+          <button
+            onClick={() => setScreen('start')}
+            className="w-full flex items-center justify-center gap-2 bg-white text-slate-950 font-bold text-lg py-4 rounded-xl hover:bg-slate-200 active:scale-[0.98] transition"
+          >
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (screen === 'end') {
     const RatingIcon = rating.icon;
     return (
